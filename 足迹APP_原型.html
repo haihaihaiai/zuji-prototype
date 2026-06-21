@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>足迹APP - 智能行程规划原型</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    background: #f0f0f5;
+    display: flex;
+    justify-content: center;
+    padding: 24px 12px;
+    min-height: 100vh;
+  }
+
+  .device-frame {
+    width: 390px;
+    background: #fff;
+    border-radius: 40px;
+    box-shadow: 0 25px 60px rgba(0,0,0,0.15);
+    overflow: hidden;
+    position: relative;
+  }
+  .status-bar {
+    display: flex; justify-content: space-between; padding: 14px 24px 8px;
+    font-size: 14px; font-weight: 600; color: #1a1a2e;
+  }
+  .app-header {
+    display: flex; align-items: center; padding: 8px 16px; gap: 12px;
+  }
+  .app-header .back { font-size: 24px; color: #1a1a2e; cursor: pointer; }
+  .app-header h1 { font-size: 18px; font-weight: 600; flex: 1; }
+  .app-header .action { color: #4A90D9; font-size: 15px; cursor: pointer; }
+
+  .content { padding: 0 16px 20px; }
+
+  /* Steps indicator */
+  .steps { display: flex; gap: 8px; padding: 12px 16px; align-items: center; }
+  .step-dot { width: 8px; height: 8px; border-radius: 50%; background: #ddd; }
+  .step-dot.active { background: #4A90D9; width: 24px; border-radius: 4px; }
+  .step-line { flex: 1; height: 2px; background: #eee; }
+  .step-dot.done { background: #4A90D9; }
+
+  /* Form */
+  .form-group { margin-bottom: 16px; }
+  .form-label { font-size: 13px; color: #666; margin-bottom: 4px; display: block; }
+  .form-input {
+    width: 100%; padding: 12px 14px; border: 1.5px solid #e0e0e0; border-radius: 12px;
+    font-size: 16px; background: #fafafa; outline: none; transition: 0.2s;
+  }
+  .form-input:focus { border-color: #4A90D9; background: #fff; }
+  .form-row { display: flex; gap: 12px; }
+  .form-row .form-group { flex: 1; }
+  .icon-input { position: relative; }
+  .icon-input .icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: 18px; }
+  .icon-input .form-input { padding-left: 42px; }
+
+  /* Tags */
+  .tag-group { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+  .tag {
+    padding: 6px 14px; border-radius: 20px; font-size: 13px; cursor: pointer;
+    border: 1.5px solid #e0e0e0; background: #fff; color: #333; transition: 0.2s;
+  }
+  .tag.active { border-color: #4A90D9; background: #4A90D9; color: #fff; }
+
+  /* Card */
+  .card {
+    background: #fff; border-radius: 16px; padding: 16px;
+    margin-bottom: 12px; border: 1px solid #f0f0f0; box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  }
+  .card-title { font-size: 15px; font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+
+  /* Plan cards */
+  .plan-card {
+    background: #fff; border-radius: 16px; border: 1.5px solid #e8e8ee;
+    margin-bottom: 12px; overflow: hidden; position: relative;
+    cursor: pointer; transition: 0.2s;
+  }
+  .plan-card:hover { border-color: #4A90D9; }
+  .plan-card.selected { border-color: #4A90D9; background: #F4F8FE; }
+  .plan-badge {
+    position: absolute; top: 12px; right: 12px;
+    background: #FF6B35; color: #fff; font-size: 11px; padding: 3px 10px;
+    border-radius: 10px; font-weight: 600;
+  }
+  .plan-header { padding: 14px 16px 8px; display: flex; justify-content: space-between; }
+  .plan-mode { display: flex; align-items: center; gap: 8px; }
+  .plan-mode .emoji { font-size: 22px; }
+  .plan-mode .name { font-weight: 600; font-size: 15px; }
+  .plan-price { text-align: right; }
+  .plan-price .total { font-weight: 700; font-size: 17px; color: #1a1a2e; }
+  .plan-price .per { font-size: 12px; color: #999; }
+  .plan-time-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 4px 16px; font-size: 13px; color: #555;
+  }
+  .plan-time-row .time { font-weight: 600; color: #1a1a2e; }
+  .plan-time-row .sep { color: #ccc; flex: 1; text-align: center; }
+
+  .plan-detail {
+    padding: 8px 16px 14px; display: flex; gap: 12px; font-size: 12px; color: #888;
+  }
+  .plan-detail span { display: flex; align-items: center; gap: 3px; }
+
+  .btn-primary {
+    width: 100%; padding: 14px; background: #4A90D9; color: #fff; border: none;
+    border-radius: 14px; font-size: 16px; font-weight: 600; cursor: pointer; transition: 0.2s;
+  }
+  .btn-primary:hover { background: #3A7BC8; }
+  .btn-secondary {
+    padding: 10px 20px; background: transparent; color: #4A90D9; border: 1.5px solid #4A90D9;
+    border-radius: 12px; font-size: 14px; font-weight: 500; cursor: pointer; transition: 0.2s;
+  }
+  .btn-secondary:hover { background: #F4F8FE; }
+
+  /* Suggestion */
+  .suggestion-card {
+    background: linear-gradient(135deg, #FFF8F0, #FFF0E8);
+    border-radius: 16px; padding: 16px; margin-bottom: 12px;
+    border: 1px solid #FFE0C0;
+  }
+  .suggestion-card .emoji-big { font-size: 32px; margin-bottom: 8px; }
+  .suggestion-card .title {
+    font-size: 16px; font-weight: 700; color: #1a1a2e; margin-bottom: 4px;
+  }
+  .suggestion-card .desc { font-size: 13px; color: #666; margin-bottom: 8px; line-height: 1.5; }
+  .suggestion-card .meta { font-size: 12px; color: #999; }
+  .suggestion-card .btn-sm {
+    margin-top: 10px; padding: 8px 16px; background: #4A90D9; color: #fff;
+    border: none; border-radius: 10px; font-size: 13px; cursor: pointer;
+  }
+  .suggestion-card.warning { background: linear-gradient(135deg, #FFF0F0, #FFE8E8); border-color: #FFC0C0; }
+  .suggestion-card.info { background: linear-gradient(135deg, #F0F4FF, #E8F0FF); border-color: #C0D4FF; }
+
+  /* Tab bar */
+  .tab-bar {
+    display: flex; border-top: 1px solid #eee; background: #fff;
+    padding: 8px 0; margin-top: 8px;
+  }
+  .tab-item { flex: 1; text-align: center; font-size: 11px; color: #999; cursor: pointer; }
+  .tab-item .tab-icon { font-size: 22px; display: block; margin-bottom: 2px; }
+  .tab-item.active { color: #4A90D9; }
+
+  /* Comparison table */
+  .compare-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .compare-table th, .compare-table td {
+    padding: 10px 8px; text-align: center; border-bottom: 1px solid #f0f0f0;
+  }
+  .compare-table th { font-weight: 600; color: #888; font-size: 11px; text-transform: uppercase; }
+  .compare-table td { color: #333; }
+  .compare-highlight { background: #F4F8FE; border-radius: 10px; }
+  .compare-highlight td:first-child { border-radius: 10px 0 0 10px; }
+  .compare-highlight td:last-child { border-radius: 0 10px 10px 0; }
+
+  /* Page transition */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* Onboarding notice */
+  .notice {
+    background: #F0F7FF; border-radius: 12px; padding: 12px 14px;
+    display: flex; align-items: center; gap: 10px; margin-bottom: 16px;
+    font-size: 13px; color: #4A90D9; border: 1px solid #D4E4F7;
+  }
+
+  /* Meal/Food section */
+  .food-tip { font-size: 13px; color: #555; padding: 8px 0; display: flex; align-items: center; gap: 6px; }
+
+  /* Day plan */
+  .day-plan {
+    background: #fff; border-radius: 16px; border: 1px solid #e8e8ee;
+    margin-bottom: 10px; padding: 14px; position: relative;
+  }
+  .day-plan .day-label { font-size: 12px; color: #4A90D9; font-weight: 600; margin-bottom: 4px; }
+  .day-plan .day-title { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+  .day-plan .item { display: flex; gap: 8px; padding: 4px 0; font-size: 13px; color: #555; align-items: center; }
+  .day-plan .item .time-tag {
+    background: #f0f0f5; padding: 2px 8px; border-radius: 6px; font-size: 11px;
+    min-width: 54px; text-align: center; color: #666;
+  }
+</style>
+</head>
+<body>
+
+<div class="device-frame">
+  <!-- Status Bar -->
+  <div class="status-bar">
+    <span>9:41</span>
+    <span>🔋 98%</span>
+  </div>
+
+  <!-- ==================== PAGE 1: Basic Info ==================== -->
+  <div id="page1" class="page active">
+    <div class="app-header">
+      <span class="back">←</span>
+      <h1>新建智能行程</h1>
+      <span class="action">保存草稿</span>
+    </div>
+    <div class="steps">
+      <div class="step-dot active"></div>
+      <div class="step-line"></div>
+      <div class="step-dot"></div>
+      <div class="step-line"></div>
+      <div class="step-dot"></div>
+    </div>
+    <div style="text-align:center;font-size:12px;color:#999;margin:-6px 0 12px">
+      <span style="color:#4A90D9;font-weight:600">基本信息</span> &nbsp;·&nbsp; 交通方案 &nbsp;·&nbsp; 确认行程
+    </div>
+
+    <div class="content">
+      <div class="notice">🌍 输入出发地和目的地，足迹帮您一站式规划交通、活动和天气建议</div>
+
+      <div class="form-group icon-input">
+        <span class="icon">📍</span>
+        <input class="form-input" type="text" placeholder="您的出发地（如：北京）" value="北京">
+      </div>
+      <div class="form-group icon-input">
+        <span class="icon">🎯</span>
+        <input class="form-input" type="text" placeholder="您的目的地（如：京都）" value="京都">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">出发日期</label>
+          <div class="icon-input">
+            <span class="icon">📅</span>
+            <input class="form-input" type="text" placeholder="选择日期" value="2026/03/20 (五)" readonly>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">返程日期</label>
+          <div class="icon-input">
+            <span class="icon">📅</span>
+            <input class="form-input" type="text" placeholder="选择日期" value="2026/03/27 (五)" readonly>
+          </div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">出行人数</label>
+        <div class="form-row" style="align-items:center;gap:10px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:14px;color:#666">成人</span>
+            <button style="width:32px;height:32px;border-radius:50%;border:1px solid #ddd;background:#fff;font-size:16px;cursor:pointer">−</button>
+            <span style="font-weight:600;width:20px;text-align:center">2</span>
+            <button style="width:32px;height:32px;border-radius:50%;border:1px solid #ddd;background:#fff;font-size:16px;cursor:pointer">+</button>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:14px;color:#666">儿童</span>
+            <button style="width:32px;height:32px;border-radius:50%;border:1px solid #ddd;background:#fff;font-size:16px;cursor:pointer">−</button>
+            <span style="font-weight:600;width:20px;text-align:center">0</span>
+            <button style="width:32px;height:32px;border-radius:50%;border:1px solid #ddd;background:#fff;font-size:16px;cursor:pointer">+</button>
+          </div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">出行偏好</label>
+        <div class="tag-group">
+          <span class="tag active">⏰ 时间优先</span>
+          <span class="tag">💰 价格优先</span>
+          <span class="tag">🚄 高铁优先</span>
+          <span class="tag">🚶 步行友好</span>
+        </div>
+      </div>
+      <button class="btn-primary" onclick="goPage(2)">开始智能规划 →</button>
+    </div>
+  </div>
+
+  <!-- ==================== PAGE 2: Transport + Suggestions ==================== -->
+  <div id="page2" class="page">
+    <div class="app-header">
+      <span class="back" onclick="goPage(1)">←</span>
+      <h1>智能规划结果</h1>
+      <span class="action">刷新</span>
+    </div>
+    <div class="steps">
+      <div class="step-dot done"></div>
+      <div class="step-line"></div>
+      <div class="step-dot active"></div>
+      <div class="step-line"></div>
+      <div class="step-dot"></div>
+    </div>
+
+    <div class="content">
+      <!-- === Transport section === -->
+      <h3 style="font-size:16px;margin:4px 0 12px;display:flex;align-items:center;gap:6px">
+        🚄✈️ 往返交通方案
+        <span style="font-size:12px;color:#999;font-weight:400;margin-left:auto">共6个方案</span>
+      </h3>
+
+      <!-- Plan Card 1 - Recommended -->
+      <div class="plan-card selected" onclick="selectPlan(this)">
+        <span class="plan-badge">⭐ 推荐</span>
+        <div class="plan-header">
+          <div class="plan-mode">
+            <span class="emoji">🚄</span>
+            <span class="name">高铁 G123 · 去程</span>
+          </div>
+          <div class="plan-price">
+            <div class="total">¥2,836</div>
+            <div class="per">2人总计</div>
+          </div>
+        </div>
+        <div class="plan-time-row">
+          <span class="time">08:30</span>
+          <span>北京南站</span>
+          <span class="sep">━━━━━ 3h30m ━━━━━</span>
+          <span class="time">12:00</span>
+          <span>京都站</span>
+        </div>
+        <div class="plan-detail">
+          <span>📊 准点率 97%</span>
+          <span>🎫 余票 132张</span>
+          <span>💺 二等座 ¥538/人</span>
+        </div>
+        <div style="height:1px;background:#f0f0f0;margin:0 16px"></div>
+        <div class="plan-header" style="padding-top:12px">
+          <div class="plan-mode">
+            <span class="emoji">✈️</span>
+            <span class="name">航班 JAL888 · 返程</span>
+          </div>
+        </div>
+        <div class="plan-time-row">
+          <span class="time">16:00</span>
+          <span>京都站</span>
+          <span class="sep">━━━━━ 2h15m ━━━━━</span>
+          <span class="time">18:15</span>
+          <span>北京首都</span>
+        </div>
+        <div class="plan-detail">
+          <span>✈️ 日本航空</span>
+          <span>🎫 经济舱 ¥880/人</span>
+          <span>🧳 行李额 23kg×2</span>
+        </div>
+      </div>
+
+      <!-- Plan Card 2 - All flight -->
+      <div class="plan-card" onclick="selectPlan(this)">
+        <div class="plan-header">
+          <div class="plan-mode">
+            <span class="emoji">✈️</span>
+            <span class="name">全程飞机 · 最快</span>
+          </div>
+          <div class="plan-price">
+            <div class="total">¥3,560</div>
+            <div class="per">2人总计</div>
+          </div>
+        </div>
+        <div class="plan-time-row">
+          <span>去程 07:30-09:20 (1h50m)</span>
+        </div>
+        <div class="plan-time-row" style="border-top:1px dashed #eee;padding-top:8px;margin-top:4px">
+          <span>返程 14:00-15:50 (1h50m)</span>
+        </div>
+        <div class="plan-detail">
+          <span>🕐 总耗时 4h</span>
+          <span>💰 略贵</span>
+        </div>
+      </div>
+
+      <!-- Plan Card 3 - Budget -->
+      <div class="plan-card" onclick="selectPlan(this)">
+        <div class="plan-header">
+          <div class="plan-mode">
+            <span class="emoji">🚄</span>
+            <span class="name">全程高铁 · 最经济</span>
+          </div>
+          <div class="plan-price">
+            <div class="total">¥2,156</div>
+            <div class="per">2人总计</div>
+          </div>
+        </div>
+        <div class="plan-time-row">
+          <span>去程 08:30-12:00 · 返程 14:00-17:30</span>
+        </div>
+        <div class="plan-detail">
+          <span>🕐 总耗时 7h</span>
+          <span>🚉 无需转场</span>
+        </div>
+      </div>
+
+      <div style="text-align:center;margin:8px 0 16px">
+        <span class="btn-secondary">展开更多方案 (共6个)</span>
+      </div>
+
+      <!-- === Compare table === -->
+      <div class="card" style="background:#f8f8fc">
+        <div class="card-title">📊 方案速览</div>
+        <table class="compare-table">
+          <tr>
+            <th></th>
+            <th>去程</th>
+            <th>返程</th>
+            <th>总时长</th>
+            <th>总价</th>
+          </tr>
+          <tr class="compare-highlight">
+            <td style="font-weight:600;color:#4A90D9">推荐🚄+✈️</td>
+            <td>🚄 3h30m</td>
+            <td>✈️ 2h15m</td>
+            <td>5h45m</td>
+            <td><b>¥2,836</b></td>
+          </tr>
+          <tr>
+            <td>最快✈️+✈️</td>
+            <td>✈️ 1h50m</td>
+            <td>✈️ 1h50m</td>
+            <td>3h40m</td>
+            <td>¥3,560</td>
+          </tr>
+          <tr>
+            <td>经济🚄+🚄</td>
+            <td>🚄 3h30m</td>
+            <td>🚄 3h30m</td>
+            <td>7h</td>
+            <td>¥2,156</td>
+          </tr>
+        </table>
+      </div>
+
+      <!-- === Time-Sensitive Suggestions === -->
+      <h3 style="font-size:16px;margin:16px 0 12px;display:flex;align-items:center;gap:6px">
+        🎯 您的旅程正值
+      </h3>
+
+      <!-- Cherry blossom -->
+      <div class="suggestion-card">
+        <div class="emoji-big">🌸</div>
+        <div class="title">京都樱花季 · 满开预警！</div>
+        <div class="desc">
+          您的行程与樱花满开期（预测 3/25-4/2）重叠 <b>5天</b>！这是京都一年中最美的时刻 ✨
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0">
+          <span style="background:#FFE8E0;padding:4px 10px;border-radius:8px;font-size:12px">📍 哲学之道</span>
+          <span style="background:#FFE8E0;padding:4px 10px;border-radius:8px;font-size:12px">📍 岚山竹林</span>
+          <span style="background:#FFE8E0;padding:4px 10px;border-radius:8px;font-size:12px">📍 二条城夜樱</span>
+        </div>
+        <button class="btn-sm" onclick="alert('已添加到行程！')">🌸 添加到行程</button>
+      </div>
+
+      <!-- Festival -->
+      <div class="suggestion-card info">
+        <div class="emoji-big">🎪</div>
+        <div class="title">京都艺术祭 2026</div>
+        <div class="desc">
+          3/20 - 3/28 ❗ 全程覆盖你的旅程！开幕特别展 3/25 19:00 @京都市京瓷美术馆
+        </div>
+        <div class="meta">🎫 门票 ¥3,000~¥8,000</div>
+        <button class="btn-sm" onclick="alert('正在加载票务信息...')">查看详情</button>
+        <button class="btn-sm" style="background:#FF6B35;margin-left:8px" onclick="alert('已添加到行程！')">添加到行程</button>
+      </div>
+
+      <!-- Climate -->
+      <div class="suggestion-card" style="background:linear-gradient(135deg,#F5F8FF,#EAF0FF);border-color:#C8D8F0">
+        <div class="emoji-big">🌤️</div>
+        <div class="title">京都三月气候指南</div>
+        <div class="desc">
+          平均气温 5°C ~ 15°C · 降水概率 30% · 日落约 18:10
+        </div>
+        <div style="display:flex;gap:12px;margin:6px 0;font-size:12px">
+          <span>🧥 建议：薄外套+长袖+围巾</span>
+          <span>☂️ 随身带折叠伞</span>
+          <span>📸 摄影黄金时段 16:30-18:00</span>
+        </div>
+        <button class="btn-sm" style="background:#666" onclick="alert('打包清单已生成')">📋 查看打包清单</button>
+      </div>
+
+      <!-- Warning -->
+      <div class="suggestion-card warning">
+        <div class="emoji-big">⚠️</div>
+        <div class="title">花粉高峰期预警</div>
+        <div class="desc">
+          3月京都花粉指数较高，过敏人群建议佩戴 N95 口罩、携带抗过敏药物、归家后及时清洗衣物。
+        </div>
+      </div>
+
+      <button class="btn-primary" onclick="goPage(3)" style="margin-top:8px">确认方案 · 生成行程 →</button>
+    </div>
+  </div>
+
+  <!-- ==================== PAGE 3: Itinerary Confirmation ==================== -->
+  <div id="page3" class="page">
+    <div class="app-header">
+      <span class="back" onclick="goPage(2)">←</span>
+      <h1>我的行程</h1>
+      <span class="action">...</span>
+    </div>
+    <div class="steps">
+      <div class="step-dot done"></div>
+      <div class="step-line"></div>
+      <div class="step-dot done"></div>
+      <div class="step-line"></div>
+      <div class="step-dot active"></div>
+    </div>
+
+    <div class="content">
+      <!-- Trip summary -->
+      <div style="background:#1a1a2e;color:#fff;border-radius:16px;padding:16px;margin-bottom:16px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div style="font-size:14px;opacity:0.8">北京 → 京都</div>
+            <div style="font-size:20px;font-weight:700;margin:4px 0">🌸 京都赏樱之旅</div>
+            <div style="font-size:13px;opacity:0.7">3月20日 - 3月27日 · 2人</div>
+          </div>
+          <div style="font-size:28px">🌸</div>
+        </div>
+        <div style="display:flex;gap:16px;margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.15)">
+          <div><span style="opacity:0.6;font-size:11px">交通</span><br><span style="font-weight:600">🚄+✈️</span></div>
+          <div><span style="opacity:0.6;font-size:11px">总花费</span><br><span style="font-weight:600">¥2,836</span></div>
+          <div><span style="opacity:0.6;font-size:11px">活动</span><br><span style="font-weight:600">2项</span></div>
+          <div><span style="opacity:0.6;font-size:11px">天气</span><br><span style="font-weight:600">5~15°C</span></div>
+        </div>
+      </div>
+
+      <!-- Day 1 -->
+      <div class="day-plan">
+        <div class="day-label">DAY 1 · 3/20 (周五)</div>
+        <div class="day-title">出发 & 抵达京都</div>
+        <div class="item">
+          <span class="time-tag">08:30-12:00</span>
+          <span>🚄 G123 北京南 → 京都站</span>
+        </div>
+        <div class="item">
+          <span class="time-tag">12:00-13:00</span>
+          <span>🚶 前往酒店 Check-in</span>
+        </div>
+        <div class="item">
+          <span class="time-tag">14:00-18:00</span>
+          <span>🏯 清水寺 · 二三年坂漫步 <span style="color:#FF6B35;font-size:11px">🌸 樱花已开</span></span>
+        </div>
+        <div class="item" style="color:#4A90D9">
+          <span class="time-tag" style="background:#E8F0FF;color:#4A90D9">19:00</span>
+          <span>🎪 京都艺术祭 · 开幕展（已添加到行程）</span>
+        </div>
+        <div class="food-tip">🍜 晚餐推荐：祇园「十二段家」寿喜烧（距展馆步行8分钟）</div>
+      </div>
+
+      <!-- Day 2 -->
+      <div class="day-plan">
+        <div class="day-label">DAY 2 · 3/21 (周六)</div>
+        <div class="day-title">岚山 & 竹林</div>
+        <div class="item">
+          <span class="time-tag">08:00-12:00</span>
+          <span>🎋 岚山竹林 · 天龙寺 <span style="color:#FF6B35;font-size:11px">🌸 樱花季</span></span>
+        </div>
+        <div class="item">
+          <span class="time-tag">12:00-13:30</span>
+          <span>🍜 岚山豆腐料理</span>
+        </div>
+        <div class="item">
+          <span class="time-tag">14:00-17:00</span>
+          <span>🚣 保津川漂流</span>
+        </div>
+        <div class="food-tip">📸 16:30-18:00 黄金摄影时段 · 日落约 18:10</div>
+      </div>
+
+      <!-- Day 3 -->
+      <div class="day-plan">
+        <div class="day-label">DAY 3 · 3/22 (周日)</div>
+        <div class="day-title">文化体验</div>
+        <div class="item">
+          <span class="time-tag">09:00-12:00</span>
+          <span>👘 和服体验 · 伏见稻荷大社</span>
+        </div>
+        <div class="item">
+          <span class="time-tag">13:00-17:00</span>
+          <span>🍵 宇治抹茶体验</span>
+        </div>
+      </div>
+
+      <div style="text-align:center;margin:12px 0">
+        <span class="btn-secondary" onclick="alert('展开完整8天行程')">展开完整 8 天行程 ↓</span>
+      </div>
+
+      <!-- Action buttons -->
+      <div style="display:flex;gap:10px;margin-bottom:16px">
+        <button class="btn-primary" style="flex:1" onclick="alert('订单跳转至携程...')">一键预订交通</button>
+        <button class="btn-secondary" style="flex:0" onclick="alert('已保存到本地')">💾 导出</button>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button class="btn-secondary" style="flex:1" onclick="alert('已复制分享链接')">📤 分享行程</button>
+        <button class="btn-secondary" style="flex:1" onclick="alert('正在加载价格变化...')">🔔 订阅价格提醒</button>
+      </div>
+    </div>
+
+    <!-- Tab bar -->
+    <div class="tab-bar">
+      <div class="tab-item active">
+        <span class="tab-icon">🗺️</span>
+        行程
+      </div>
+      <div class="tab-item" onclick="alert('探索更多目的地')">
+        <span class="tab-icon">🔍</span>
+        发现
+      </div>
+      <div class="tab-item" onclick="alert('灵感推荐')">
+        <span class="tab-icon">💡</span>
+        灵感
+      </div>
+      <div class="tab-item" onclick="alert('我的')">
+        <span class="tab-icon">👤</span>
+        我的
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function goPage(n) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('page'+n).classList.add('active');
+  }
+  function selectPlan(el) {
+    document.querySelectorAll('.plan-card').forEach(c => c.classList.remove('selected'));
+    el.classList.add('selected');
+  }
+</script>
+</body>
+</html>
